@@ -5,24 +5,14 @@ import json
 EPSILON = "&"
 
 class MaquinaMealy:
-    """
-    Representa uma Máquina de Mealy.
-
-    Uma Máquina de Mealy é um transdutor de estado finito que gera uma saída
-    com base em seu estado atual e no símbolo de entrada. A saída está
-    associada à transição.
-    """
+    """Representa uma Máquina de Mealy."""
     def __init__(self):
         self.states: Set[str] = set()
         self.start_state: Optional[str] = None
         self.input_alphabet: Set[str] = set()
         self.output_alphabet: Set[str] = set()
-        # O dicionário de transições mapeia (estado_origem, simbolo_entrada) para (estado_destino, simbolo_saida)
         self.transitions: Dict[Tuple[str, str], Tuple[str, str]] = {}
 
-    # -------------------------
-    # Manipulação de estados e transições
-    # -------------------------
     def add_state(self, state: str, is_start: bool = False):
         """Adiciona um novo estado à máquina."""
         self.states.add(state)
@@ -30,10 +20,7 @@ class MaquinaMealy:
             self.start_state = state
 
     def add_transition(self, src: str, input_symbol: str, dst: str, output_symbol: str):
-        """
-        Adiciona uma transição à máquina.
-        Para um dado estado e entrada, a transição e a saída são únicas (determinísticas).
-        """
+        """Adiciona uma transição à máquina."""
         if src not in self.states or dst not in self.states:
             raise ValueError(f"Estado de origem '{src}' ou destino '{dst}' não existe.")
         
@@ -51,7 +38,6 @@ class MaquinaMealy:
         if self.start_state == state_to_remove:
             self.start_state = None
 
-        # Filtra as transições que envolvam o estado removido
         new_transitions = {}
         for (src, in_sym), (dst, out_sym) in self.transitions.items():
             if src != state_to_remove and dst != state_to_remove:
@@ -84,17 +70,11 @@ class MaquinaMealy:
             new_transitions[(new_src, in_sym)] = (new_dst, out_sym)
         self.transitions = new_transitions
 
-    # -------------------------
-    # Simulação
-    # -------------------------
     def simulate(self, input_str: str) -> Optional[str]:
-        """
-        Simulação rápida que retorna apenas a saída final.
-        """
+        """Simulação rápida que retorna apenas a saída final."""
         _, final_output = self.simulate_history(input_str)
         return final_output
 
-    # ***** INÍCIO DA MODIFICAÇÃO (Multi-caractere) *****
     def simulate_history(self, input_str: str) -> Tuple[List[Tuple[str, str, int]], Optional[str]]:
         """
         Simula a execução e retorna o histórico de passos para animação.
@@ -110,49 +90,37 @@ class MaquinaMealy:
         current_state = self.start_state
         output_str = ""
         input_idx = 0
-        
-        # O histórico começa com o estado inicial, saída vazia e índice 0
         history = [(current_state, "", 0)]
 
         while input_idx < len(input_str):
-            # 1. Encontra todas as transições que saem do estado atual
             possible_symbols = set()
             for (src, sym) in self.transitions.keys():
                 if src == current_state:
                     possible_symbols.add(sym)
 
-            # 2. Ordena do mais longo para o mais curto (ex: "aa" antes de "a")
             sorted_symbols = sorted(list(possible_symbols), key=len, reverse=True)
 
             remaining_input = input_str[input_idx:]
             consumed = False
 
-            # 3. Tenta encontrar a transição mais longa que bate com a fita
             for symbol in sorted_symbols:
                 if remaining_input.startswith(symbol):
-                    # Transição encontrada
                     next_state, output_symbol = self.transitions[(current_state, symbol)]
                     
                     output_str += output_symbol
                     current_state = next_state
-                    input_idx += len(symbol) # Avança o índice pelo tamanho do símbolo
+                    input_idx += len(symbol)
                     
                     history.append((current_state, output_str, input_idx))
                     consumed = True
-                    break # Para de procurar (já achou a mais longa)
+                    break
 
             if not consumed:
-                # Nenhuma transição (nem "a", nem "aa", etc.) foi encontrada
-                # Máquina trava
                 return history, None
         
-        # Fim da simulação
         return history, output_str
-    # ***** FIM DA MODIFICAÇÃO *****
 
-    # -------------------------
-    # Serialização
-    # -------------------------
+
     def to_json(self) -> str:
         """Serializa a máquina para uma string JSON."""
         data = {
