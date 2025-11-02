@@ -11,45 +11,38 @@ from gui.gui_automato import EditorGUI
 from gui.gui_mealy import MealyGUI
 from gui.gui_moore import MooreGUI
 from gui.gui_pilha import PilhaGUI
-from gui.gui_turing import TuringGUI # <-- ADICIONADO
+from gui.gui_turing import TuringGUI
 import sv_ttk
 
 class MainMenu:
     def __init__(self, root):
         self.root = root
         self.root.title("IC-Tômato++")
-        self.root.geometry("500x750") # <-- Aumentei um pouco a altura para o novo botão
+        self.root.geometry("500x750")
         
-        # Centraliza a janela
         self.root.eval('tk::PlaceWindow . center')
 
-        # Frame principal para conter os widgets
         main_frame = tk.Frame(root, padx=20, pady=20)
         main_frame.pack(expand=True)
 
         self.load_logo()
 
-        # Título
         title_font = font.Font(family="Helvetica", size=28, weight="bold")
         subtitle_font = font.Font(family="Helvetica", size=16, weight="bold")
 
-        # Canvas para o título com efeito de brilho
         title_canvas = tk.Canvas(main_frame, height=60, bg=main_frame.cget('bg'), highlightthickness=0)
         title_canvas.pack(pady=(0, 5))
 
-        # Efeito de brilho (desenhando o texto com deslocamento)
-        glow_color = "#ffc107" # Amarelo do brilho
+        glow_color = "#ffc107"
         for i in range(1, 3):
             title_canvas.create_text(200 - i, 30 - i, text="IC-Tômato++", font=title_font, fill=glow_color, anchor='center')
             title_canvas.create_text(200 + i, 30 + i, text="IC-Tômato++", font=title_font, fill=glow_color, anchor='center')
 
-        # Texto principal do título
         title_canvas.create_text(200, 30, text="IC-Tômato++", font=title_font, fill="white", anchor='center')
 
         label = ttk.Label(main_frame, text="Selecione o Editor", font=subtitle_font)
         label.pack(pady=(0, 25))
 
-        # --- Botões customizados ---
         self.create_menu_option(
             main_frame,
             text="Editor de Autômatos Finitos",
@@ -74,23 +67,19 @@ class MainMenu:
             command=self.launch_pda_editor
         )
         
-        # --- BOTÃO ADICIONADO ---
         self.create_menu_option(
             main_frame,
             text="Editor de Máquinas de Turing",
             command=self.launch_turing_editor
         )
-        # ------------------------
 
     def create_menu_option(self, parent, text, command):
         """Cria um botão customizado com efeito de hover."""
-        # Cores
-        NORMAL_BG = "#ffc107"  # Amarelo
-        HOVER_BG = "#007bff"   # Azul
-        NORMAL_FG = "#212529"  # Preto suave
-        HOVER_FG = "white"     # Branco
+        NORMAL_BG = "#ffc107"
+        HOVER_BG = "#007bff"
+        NORMAL_FG = "#212529"
+        HOVER_FG = "white"
 
-        # Frame que serve como o "quadrado"
         frame = tk.Frame(parent, bg=NORMAL_BG)
         frame.pack(pady=10, fill='x')
 
@@ -98,11 +87,9 @@ class MainMenu:
                          font=("Helvetica", 12, "bold"), pady=25, cursor="hand2")
         label.pack(fill='x')
 
-        # Efeitos de Hover (passar o mouse)
         frame.bind("<Enter>", lambda e: (frame.config(bg=HOVER_BG), label.config(bg=HOVER_BG, fg=HOVER_FG)))
         frame.bind("<Leave>", lambda e: (frame.config(bg=NORMAL_BG), label.config(bg=NORMAL_BG, fg=NORMAL_FG)))
         
-        # Ação de clique
         frame.bind("<Button-1>", lambda e: command())
         label.bind("<Button-1>", lambda e: command())
 
@@ -122,15 +109,12 @@ class MainMenu:
         """Cria uma nova janela para o editor de Autômatos de Pilha."""
         self.open_editor_window(PilhaGUI)
 
-    # --- FUNÇÃO ADICIONADA ---
     def launch_turing_editor(self):
         """Cria uma nova janela para o editor de Máquinas de Turing."""
         self.open_editor_window(TuringGUI)
-    # -------------------------
 
     def load_logo(self):
         """Carrega e exibe o logo no canto superior direito."""
-        # Tenta usar o ícone local primeiro (mais rápido e sem depender de rede)
         icon_path = os.path.join(os.path.dirname(__file__), "icons", "icon.ico")
         try:
             if os.path.exists(icon_path):
@@ -141,11 +125,9 @@ class MainMenu:
                 self.logo_image = ImageTk.PhotoImage(display_img)
                 self.icon_image = ImageTk.PhotoImage(icon_img)
 
-                # Aplica o .ico como ícone do aplicativo no Windows (e em outras plataformas quando suportado)
                 try:
                     self.root.iconbitmap(icon_path)
                 except Exception:
-                    # fallback para iconphoto
                     try:
                         self.root.iconphoto(False, self.icon_image)
                     except Exception:
@@ -153,11 +135,9 @@ class MainMenu:
 
                 logo_label = tk.Label(self.root, image=self.logo_image, bg=self.root.cget('bg'))
                 logo_label.place(relx=1.0, y=10, x=-10, anchor='ne')
-                # armazena o caminho para uso em outras janelas
                 self.icon_path = icon_path
                 return
 
-            # Se o ícone local não existir, tenta baixar a imagem remota como antes
             url = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT_Iz4iLTCkvEbHl93acer5aym3CcSl5CHMBg&s"
             with urllib.request.urlopen(url) as response:
                 image_data = response.read()
@@ -183,21 +163,17 @@ class MainMenu:
 
         Ao fechar a janela do editor, o menu principal é restaurado.
         """
-        # Oculta a janela principal
         try:
             self.root.withdraw()
         except Exception:
             pass
 
         editor_window = tk.Toplevel(self.root)
-        # Aplica o mesmo ícone ao editor (se disponível)
         try:
-            # Prioriza .ico local via iconbitmap (bom no Windows)
             if hasattr(self, 'icon_path') and self.icon_path:
                 try:
                     editor_window.iconbitmap(self.icon_path)
                 except Exception:
-                    # fallback para PhotoImage
                     if hasattr(self, 'icon_image'):
                         editor_window.iconphoto(False, self.icon_image)
             else:
@@ -207,7 +183,6 @@ class MainMenu:
             pass
         editor_app = EditorClass(editor_window)
 
-        # Quando o editor for fechado, reexibe a janela principal
         def on_close():
             try:
                 editor_window.destroy()
@@ -224,12 +199,10 @@ def main():
     root = tk.Tk()
 
     try:
-        # Melhora a resolução em telas com alta densidade de pixels (HiDPI) no Windows
         ctypes.windll.shcore.SetProcessDpiAwareness(1)
     except Exception:
-        pass # Ignora o erro se não estiver no Windows ou a função não estiver disponível
+        pass
 
-    # Aplica um tema moderno (light ou dark)
     sv_ttk.set_theme("light")
     
     app = MainMenu(root)
