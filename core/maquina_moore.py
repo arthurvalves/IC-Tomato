@@ -5,19 +5,13 @@ import json
 EPSILON = "&"
 
 class MaquinaMoore:
-    """
-    Representa uma Máquina de Moore.
-
-    A saída de uma Máquina de Moore está associada ao seu estado atual.
-    """
+    """Representa uma Máquina de Moore."""
     def __init__(self):
         self.states: Set[str] = set()
         self.start_state: Optional[str] = None
         self.input_alphabet: Set[str] = set()
         self.output_alphabet: Set[str] = set()
-        # Mapeia estado para seu símbolo de saída
         self.output_function: Dict[str, str] = {}
-        # Mapeia (estado_origem, simbolo_entrada) para estado_destino
         self.transitions: Dict[Tuple[str, str], str] = {}
 
     def add_state(self, state: str, output_symbol: str, is_start: bool = False):
@@ -82,7 +76,6 @@ class MaquinaMoore:
         if key in self.transitions:
             del self.transitions[key]
 
-    # ***** INÍCIO DA MODIFICAÇÃO (Multi-caractere) *****
     def simulate_history(self, input_str: str) -> Tuple[List[Tuple[str, str, int]], Optional[str]]:
         """
         Simula a execução e retorna o histórico de passos.
@@ -97,61 +90,50 @@ class MaquinaMoore:
             return [], None
 
         current_state = self.start_state
-        # A saída inicial é a do estado inicial
         output_str = self.output_function.get(current_state, '') 
         input_idx = 0
         
-        # O histórico começa com o estado inicial, sua saída e índice 0
         history = [(current_state, output_str, 0)]
 
         while input_idx < len(input_str):
-            # 1. Encontra todas as transições que saem do estado atual
             possible_symbols = set()
             for (src, sym) in self.transitions.keys():
                 if src == current_state:
                     possible_symbols.add(sym)
 
-            # 2. Ordena do mais longo para o mais curto
             sorted_symbols = sorted(list(possible_symbols), key=len, reverse=True)
 
             remaining_input = input_str[input_idx:]
             consumed = False
 
-            # 3. Tenta encontrar a transição mais longa que bate com a fita
             for symbol in sorted_symbols:
                 if remaining_input.startswith(symbol):
-                    # Transição encontrada
                     next_state = self.transitions[(current_state, symbol)]
                     
-                    # Adiciona a saída do *novo* estado à string de saída
                     output_str += self.output_function.get(next_state, '') 
                     
                     current_state = next_state
-                    input_idx += len(symbol) # Avança o índice
+                    input_idx += len(symbol)
                     
                     history.append((current_state, output_str, input_idx))
                     consumed = True
-                    break # Para de procurar
+                    break
 
             if not consumed:
-                # Nenhuma transição encontrada, máquina trava
                 return history, None
         
-        # Fim da simulação
         return history, output_str
-    # ***** FIM DA MODIFICAÇÃO *****
 
     def to_json(self) -> str:
         """Serializa a máquina para uma string JSON."""
-        # Filtra input_alphabet e output_alphabet para remover None, se houver
         input_alpha = list(filter(None, self.input_alphabet))
         output_alpha = list(filter(None, self.output_alphabet))
         
         data = {
             "states": list(self.states),
             "start_state": self.start_state,
-            "input_alphabet": input_alpha, # Usando a lista filtrada
-            "output_alphabet": output_alpha, # Usando a lista filtrada
+            "input_alphabet": input_alpha,
+            "output_alphabet": output_alpha,
             "output_function": self.output_function,
             "transitions": [
                 {"src": src, "input": in_sym, "dst": dst}
@@ -170,23 +152,20 @@ class MaquinaMoore:
         for state, output in output_func.items():
             machine.add_state(state, output, is_start=(state == data.get("start_state")))
         
-        # Recalcula alfabetos a partir das transições e função de saída
         machine.input_alphabet = set()
         machine.output_alphabet = set(output_func.values())
 
         for t in data.get("transitions", []):
             try:
-                # Adiciona e atualiza o alfabeto de entrada
                 machine.add_transition(t["src"], t["input"], t["dst"])
             except KeyError as e:
                 print(f"Aviso: Ignorando transição malformada (chave faltando: {e}): {t}")
             except ValueError as e:
                  print(f"Aviso: Ignorando transição inválida ({e}): {t}")
 
-        # Garante que start_state é válido
         if machine.start_state not in machine.states:
             if machine.states:
-                machine.start_state = next(iter(machine.states)) # Pega um estado qualquer se o salvo for inválido
+                machine.start_state = next(iter(machine.states))
                 print(f"Aviso: Estado inicial '{data.get('start_state')}' não encontrado. Definindo '{machine.start_state}' como inicial.")
             else:
                  machine.start_state = None
@@ -206,7 +185,6 @@ def restore_from_moore_snapshot(s: str) -> Tuple[MaquinaMoore, Dict[str, Tuple[i
     """Restaura uma máquina de Moore e suas posições a partir de um snapshot JSON."""
     data = json.loads(s)
     
-    # Garante que o objeto da máquina seja um dicionário antes de passar para from_json
     machine_data = data.get("moore_machine", {})
     if isinstance(machine_data, str):
         machine_data = json.loads(machine_data)
