@@ -15,12 +15,10 @@ class AutomatoPilha:
         self.start_state: Optional[str] = None
         self.start_stack_symbol: str = 'Z'
         self.final_states: Set[str] = set()
-        # Mapeia (estado, simbolo_entrada, simbolo_pilha_topo) para um conjunto de (novo_estado, simbolos_a_empilhar)
         self.transitions: Dict[Tuple[str, str, str], Set[Tuple[str, str]]] = defaultdict(set)
 
     def add_state(self, state: str, is_start: bool = False, is_final: bool = False):
         self.states.add(state)
-        # Define como estado inicial se for marcado ou se for o primeiro estado adicionado
         if is_start or (self.start_state is None and len(self.states) == 1):
             self.start_state = state
         if is_final:
@@ -38,11 +36,9 @@ class AutomatoPilha:
 
         if input_sym != EPSILON: self.input_alphabet.add(input_sym)
         if pop_sym != EPSILON: self.stack_alphabet.add(pop_sym)
-        # Adiciona símbolos individuais de push_syms ao alfabeto da pilha
         for sym in push_syms:
             if sym != EPSILON: self.stack_alphabet.add(sym)
 
-        # Garante que start_stack_symbol esteja no alfabeto da pilha
         self.stack_alphabet.add(self.start_stack_symbol)
 
         self.transitions[(src, input_sym, pop_sym)].add((dst, push_syms))
@@ -62,7 +58,6 @@ class AutomatoPilha:
         new_transitions = defaultdict(set)
         for (src, inp, pop), destinations in self.transitions.items():
             if src != state_to_remove:
-                # Filtra os destinos que não são para o estado removido
                 new_destinations = {d for d in destinations if d[0] != state_to_remove}
                 if new_destinations:
                     new_transitions[(src, inp, pop)] = new_destinations
@@ -91,7 +86,6 @@ class AutomatoPilha:
             new_destinations = set()
             for dst, push in destinations:
                 new_destinations.add((new_name if dst == old_name else dst, push))
-            # Atualiza a chave e o valor
             new_transitions[(new_src, inp, pop)] = new_destinations
         self.transitions = new_transitions
         
@@ -101,11 +95,10 @@ class AutomatoPilha:
         target = (dst, push_syms)
         if key in self.transitions:
             self.transitions[key].discard(target)
-            if not self.transitions[key]: # Remove a chave se o conjunto ficar vazio
+            if not self.transitions[key]:
                 del self.transitions[key]
 
 
-    # ***** INÍCIO DAS MODIFICAÇÕES (Multi-caractere) *****
     def simulate_history(self, input_str: str) -> Tuple[List[Tuple[str, int, Tuple[str, ...]]], bool]:
         """
         Simula a execução e retorna o histórico de configurações para animação.
@@ -117,56 +110,45 @@ class AutomatoPilha:
         if not self.start_state:
             return [], False
 
-        # Configuração: (estado, indice_entrada, pilha_tupla)
         initial_config = (self.start_state, 0, (self.start_stack_symbol,))
     
-        # Conjunto de configurações ativas: {(estado, indice_entrada, pilha_tupla)}
         current_configs = self._get_epsilon_closure({initial_config})
         
-        # O histórico armazena uma configuração representativa de cada passo
         history: List[Tuple[str, int, Tuple[str, ...]]] = []
         if current_configs:
             rep_state, rep_idx, rep_stack = next(iter(current_configs))
             history.append((rep_state, rep_idx, rep_stack))
-        else: # Caso inicial impossível
+        else:
             history.append((self.start_state or "-", 0, (self.start_stack_symbol,)))
 
         input_idx = 0
         while input_idx < len(input_str):
-            # 1. Encontra os símbolos de transição possíveis (não-epsilon)
             possible_symbols = {sym for (src, sym, pop) in self.transitions.keys() if sym != EPSILON}
             sorted_symbols = sorted(list(possible_symbols), key=len, reverse=True)
 
             consumed_symbol = None
             remaining_input = input_str[input_idx:]
 
-            # 2. Encontra a transição mais longa que corresponde à entrada restante
             for symbol in sorted_symbols:
                 if remaining_input.startswith(symbol):
                     consumed_symbol = symbol
                     break
             
-            # 3. Se um símbolo foi consumido, calcula as próximas configurações
             if consumed_symbol:
                 next_configs_after_move = self._move_with_symbol(current_configs, consumed_symbol)
                 current_configs = self._get_epsilon_closure(next_configs_after_move)
                 input_idx += len(consumed_symbol)
             else:
-                # Nenhuma transição corresponde, a máquina trava
                 current_configs = set()
 
-            # 4. Se não há mais configurações possíveis, para a simulação
             if not current_configs:
                 break
 
-            # 5. Adiciona uma configuração representativa ao histórico
             rep_state, _, rep_stack = next(iter(current_configs))
             history.append((rep_state, input_idx, rep_stack))
 
-        # Verificação final de aceitação
         accepted = False
-        if current_configs: # Verifica se não travou
-            # A cadeia é aceita se, após consumir toda a entrada, algum dos estados ativos for final
+        if current_configs:
             if input_idx == len(input_str):
                 accepted = any(state in self.final_states for state, _, _ in current_configs)
 
@@ -180,7 +162,6 @@ class AutomatoPilha:
         while queue:
             state, input_idx, stack = queue.pop(0)
 
-            # Transições ε que não desempilham (lê ε, desempilha ε)
             key = (state, EPSILON, EPSILON)
             for next_state, push_syms in self.transitions.get(key, set()):
                 new_stack = stack + tuple(push_syms) if push_syms != EPSILON else stack
@@ -189,7 +170,6 @@ class AutomatoPilha:
                     closure.add(new_config)
                     queue.append(new_config)
             
-            # Transições ε que desempilham (lê ε, desempilha topo)
             top = stack[-1] if stack else None
             if top:
                 key = (state, EPSILON, top)
@@ -207,13 +187,11 @@ class AutomatoPilha:
         next_configs = set()
 
         for state, input_idx, stack in configs:
-            # Transições que não desempilham (lê symbol, desempilha ε)
             key = (state, symbol, EPSILON)
             for next_state, push_syms in self.transitions.get(key, set()):
                 new_stack = stack + tuple(push_syms) if push_syms != EPSILON else stack
                 next_configs.add((next_state, input_idx, new_stack))
 
-            # Transições que desempilham (lê symbol, desempilha topo)
             top = stack[-1] if stack else None
             if top:
                 key = (state, symbol, top)
@@ -222,7 +200,6 @@ class AutomatoPilha:
                     new_stack = stack_base + tuple(push_syms) if push_syms != EPSILON else stack_base
                     next_configs.add((next_state, input_idx, new_stack))
         return next_configs
-    # ***** FIM DAS MODIFICAÇÕES *****
 
 
     def simulate(self, input_str: str) -> bool:
@@ -233,7 +210,6 @@ class AutomatoPilha:
         if not self.start_state:
             return False
 
-        # A nova simulate_history lida com a lógica de aceitação
         _, accepted = self.simulate_history(input_str)
         return accepted
 
@@ -242,10 +218,8 @@ class AutomatoPilha:
         serializable_transitions = {}
         for (src, inp, pop_sym), dests in self.transitions.items():
             key = f"{src},{inp},{pop_sym}"
-            # Converte tuplas internas para listas para serem serializáveis
             serializable_transitions[key] = [list(d) for d in dests]
 
-        # Filtra alfabetos para garantir que sejam listas de strings
         input_alpha = list(filter(lambda x: isinstance(x, str), self.input_alphabet))
         stack_alpha = list(filter(lambda x: isinstance(x, str), self.stack_alphabet))
 
@@ -273,7 +247,6 @@ class AutomatoPilha:
         pda.start_stack_symbol = data.get("start_stack_symbol", 'Z')
         pda.final_states = set(data.get("final_states", []))
         
-        # Garante que start_stack_symbol esteja no alfabeto
         if pda.start_stack_symbol:
              pda.stack_alphabet.add(pda.start_stack_symbol)
 
@@ -282,9 +255,7 @@ class AutomatoPilha:
                 parts = key.split(',', 2)
                 if len(parts) == 3:
                     src, inp, pop_sym = parts
-                    # Converte listas de volta para tuplas ao carregar
                     pda.transitions[(src, inp, pop_sym)] = {tuple(d) for d in dests}
-                     # Adiciona símbolos aos alfabetos (redundante se add_transition for chamado, mas seguro)
                     if inp != EPSILON: pda.input_alphabet.add(inp)
                     if pop_sym != EPSILON: pda.stack_alphabet.add(pop_sym)
                     for _, push_list in dests:
@@ -296,7 +267,6 @@ class AutomatoPilha:
             except Exception as e:
                  print(f"Aviso: Erro ao processar transição {key} -> {dests}: {e}")
 
-        # Garante que start_state é válido
         if pda.start_state not in pda.states:
             if pda.states:
                 pda.start_state = next(iter(pda.states))
@@ -319,7 +289,6 @@ def restore_from_pda_snapshot(s: str) -> Tuple[AutomatoPilha, Dict[str, Tuple[in
     """Restaura um autômato de pilha e suas posições a partir de um snapshot JSON."""
     data = json.loads(s)
     
-    # Garante que o objeto do autômato seja um dicionário antes de passar para from_json
     automato_data = data.get("automato", {})
     if isinstance(automato_data, str):
         automato_data = json.loads(automato_data)
