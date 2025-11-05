@@ -1,15 +1,8 @@
-#!/usr/bin/env python3
-"""
-maquina_turing.py - Lógica para Máquinas de Turing.
-"""
-
 import json
 from collections import defaultdict
 from typing import Dict, Set, Tuple, Optional, List
 
-# Símbolo usado para representar células em branco na fita
 BLANK_SYMBOL = "β" 
-# Limite de passos para evitar loops infinitos durante a simulação
 DEFAULT_MAX_STEPS = 1000
 
 class MaquinaTuring:
@@ -19,13 +12,11 @@ class MaquinaTuring:
     def __init__(self):
         self.states: Set[str] = set()
         self.start_state: Optional[str] = None
-        self.final_states: Set[str] = set() # Aceitação por estado final
+        self.final_states: Set[str] = set()
         self.input_alphabet: Set[str] = set()
         self.tape_alphabet: Set[str] = {BLANK_SYMBOL}
         self.blank_symbol: str = BLANK_SYMBOL
         
-        # Mapeia (estado_atual, simbolo_lido) para (proximo_estado, simbolo_escrito, direcao)
-        # Direção pode ser 'L' (Esquerda) ou 'R' (Direita)
         self.transitions: Dict[Tuple[str, str], Tuple[str, str, str]] = {}
 
     def add_state(self, state: str, is_start: bool = False, is_final: bool = False):
@@ -46,7 +37,6 @@ class MaquinaTuring:
         if direction not in {'L', 'R'}:
             raise ValueError("Direção deve ser 'L' ou 'R'.")
         
-        # Atualiza alfabetos
         self.input_alphabet.add(read)
         self.tape_alphabet.add(read)
         self.tape_alphabet.add(write)
@@ -65,7 +55,6 @@ class MaquinaTuring:
 
         self.final_states.discard(state_to_remove)
 
-        # Filtra transições
         new_transitions = {}
         for (src, read), (dst, write, move) in self.transitions.items():
             if src != state_to_remove and dst != state_to_remove:
@@ -107,8 +96,6 @@ class MaquinaTuring:
         if not self.start_state:
             return [], "REJEITADO"
 
-        # A fita é um dicionário que armazena apenas células não-brancas (ou modificadas)
-        # defaultdict(lambda: self.blank_symbol) é a fita "infinita"
         tape = defaultdict(lambda: self.blank_symbol)
         for i, symbol in enumerate(input_str):
             tape[i] = symbol
@@ -117,41 +104,32 @@ class MaquinaTuring:
         head_pos = 0
         step_count = 0
 
-        # O histórico armazena (estado, fita_atual_visivel, posicao_cabeca)
         history: List[Tuple[str, Dict[int, str], int]] = [(current_state, dict(tape), head_pos)]
 
         while step_count < max_steps:
-            # Condição de Parada (Aceitação)
             if current_state in self.final_states:
                 return history, "ACEITO"
             
             read_symbol = tape[head_pos]
             transition_key = (current_state, read_symbol)
 
-            # Condição de Parada (Rejeição)
             if transition_key not in self.transitions:
-                return history, "REJEITADO" # Travou
+                return history, "REJEITADO"
 
-            # Executa a transição
             (next_state, write_symbol, direction) = self.transitions[transition_key]
             
-            # Escreve na fita
             tape[head_pos] = write_symbol
             
-            # Move a cabeça
             if direction == 'R':
                 head_pos += 1
-            else: # 'L'
+            else: 
                 head_pos -= 1
                 
-            # Atualiza o estado
             current_state = next_state
             step_count += 1
             
-            # Salva no histórico (dict(tape) cria um snapshot da fita naquele momento)
             history.append((current_state, dict(tape), head_pos))
 
-        # Se sair do loop, atingiu o limite de passos
         return history, "LOOP"
 
     def simulate(self, input_str: str) -> bool:
@@ -159,12 +137,8 @@ class MaquinaTuring:
         _, result = self.simulate_history(input_str)
         return result == "ACEITO"
 
-    # -------------------------
-    # Serialização
-    # -------------------------
     def to_json(self) -> str:
         """Serializa a máquina para uma string JSON."""
-        # Converte chaves de tupla para strings
         serializable_transitions = {}
         for (src, read), (dst, write, move) in self.transitions.items():
             key = f"{src},{read}"
@@ -204,10 +178,7 @@ class MaquinaTuring:
                 print(f"Aviso: Ignorando transição malformada: {key} -> {value}")
                 
         return tm
-
-# -------------------------
-# Funções de Snapshot (para Undo/Redo na GUI)
-# -------------------------
+        
 
 def snapshot_of_turing(machine: MaquinaTuring, positions: Dict[str, Tuple[int, int]]) -> str:
     """Retorna JSON serializável representando o estado completo (máquina + posições)."""

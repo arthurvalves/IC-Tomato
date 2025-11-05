@@ -1,7 +1,3 @@
-#!/usr/bin/env python3
-"""
-gui_turing.py - Interface para Máquinas de Turing.
-"""
 import os
 import math
 import tkinter as tk
@@ -9,10 +5,8 @@ from tkinter import simpledialog, filedialog, messagebox, ttk
 from collections import defaultdict
 from typing import Dict, Tuple, List, Set
 
-# Importações de PIL
 from PIL import Image, ImageTk, ImageEnhance
 
-# Importações do módulo da máquina de turing
 from core.maquina_turing import (
     MaquinaTuring,
     BLANK_SYMBOL,
@@ -20,17 +14,12 @@ from core.maquina_turing import (
     restore_from_turing_snapshot
 )
 
-# --- CONSTANTES ---
 STATE_RADIUS = 24
 FONT = ("Helvetica", 13)
-ANIM_MS = 300 # Milissegundos para animação da simulação
+ANIM_MS = 300 
 
-# Símbolo para exibição do "branco" na GUI, que será convertido para BLANK_SYMBOL
 DISPLAY_BLANK = "β"
 
-# -------------------------
-# Classe Tooltip (Dica de Ferramenta)
-# -------------------------
 class Tooltip:
     """ Cria um tooltip (dica de ferramenta) para um widget. """
     def __init__(self, widget, text):
@@ -63,9 +52,6 @@ class Tooltip:
             try: tw.destroy()
             except tk.TclError: pass
 
-# -------------------------
-# Classe Principal da GUI para Máquina de Turing
-# -------------------------
 class TuringGUI:
     """ Classe principal da interface gráfica para Máquinas de Turing. """
     def __init__(self, root: tk.Toplevel):
@@ -76,7 +62,6 @@ class TuringGUI:
         except tk.TclError:
             root.geometry("1100x750")
 
-        # Estilo ttk
         style = ttk.Style()
         style.configure("TButton", padding=(15, 12))
         style.configure("Accent.TButton", padding=(15, 12))
@@ -84,7 +69,7 @@ class TuringGUI:
         style.configure("Toolbutton", padding=(10, 8), relief="flat")
         style.map("Toolbutton", background=[('active', '#e0e0e0')])
 
-        # Dados
+        # Modelo de dados
         self.automato = MaquinaTuring()
         self.positions: Dict[str, Tuple[int, int]] = {}
         self.mode = "select"
@@ -104,9 +89,9 @@ class TuringGUI:
         self.history: List[Tuple[str, Dict[int, str], int]] = []
         self.sim_step = 0
         self.sim_playing = False
-        self.result_indicator = None # "ACEITO", "REJEITADO", "LOOP"
+        self.result_indicator = None
 
-        # Transformação (zoom/pan)
+        # Transform (zoom/pan)
         self.scale = 1.0
         self.offset_x = 0
         self.offset_y = 0
@@ -194,10 +179,8 @@ class TuringGUI:
         self.mode_buttons[icon_name] = button
         Tooltip(button, tooltip_text)
 
-        # ***** INÍCIO DA CORREÇÃO *****
         button.bind("<Enter>", lambda e, m=icon_name: self._set_mode(m, pinned=False), add='+')
         button.bind("<Leave>", lambda e: self._set_mode(self.pinned_mode, pinned=False), add='+')
-        # ***** FIM DA CORREÇÃO *****
 
 
     def _build_canvas(self):
@@ -219,7 +202,6 @@ class TuringGUI:
         ttk.Button(bottom, text="Play/Pausar", command=self.cmd_play_pause).pack(side=tk.LEFT, padx=2)
         ttk.Button(bottom, text="Reiniciar", command=self.cmd_reset_sim).pack(side=tk.LEFT, padx=2)
 
-        # Canvas para exibir a FITA da Máquina de Turing
         self.sim_display_canvas = tk.Canvas(bottom, height=60, bg="#f0f0f0", highlightthickness=1, highlightbackground="#cccccc")
         self.sim_display_canvas.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=10)
 
@@ -279,8 +261,6 @@ class TuringGUI:
         self.mode_label.config(text=mode_text_map.get(self.mode, "Modo: Selecionar"))
         self._update_mode_button_styles()
 
-
-    # --- Comandos Botões ---
     def cmd_add_state(self): self._set_mode("add_state", pinned=True); self.status.config(text="Clique no canvas para adicionar estado.")
     def cmd_add_transition(self): self._set_mode("add_transition_src", pinned=True); self.transition_src=None; self.status.config(text="Clique no estado de origem.")
     def cmd_set_start(self): self._set_mode("set_start", pinned=True); self.status.config(text="Clique no estado inicial.")
@@ -288,7 +268,6 @@ class TuringGUI:
     def cmd_delete_state_mode(self): self._set_mode("delete_state", pinned=True); self.status.config(text="Clique em um estado para excluí-lo.")
     def cmd_delete_transition_mode(self): self._set_mode("delete_transition", pinned=True); self.status.config(text="Clique no rótulo de uma transição para excluí-la.")
 
-    # --- Comandos Arquivo/Exportar ---
     def cmd_open(self):
         path = filedialog.askopenfilename(defaultextension=".json", filetypes=[("Turing Machine Files", "*.json"), ("All", "*.*")])
         if not path: return
@@ -305,10 +284,8 @@ class TuringGUI:
         if not self.current_filepath: self.cmd_save_as()
         else:
             try:
-                # Salva o estado atual
                 snap = snapshot_of_turing(self.automato, self.positions)
                 with open(self.current_filepath, "w", encoding="utf-8") as f: f.write(snap)
-                # Adiciona o estado salvo ao topo da pilha de undo
                 if not self.undo_stack or self.undo_stack[-1] != snap:
                     self.undo_stack.append(snap)
                     if len(self.undo_stack) > 50: self.undo_stack.pop(0)
@@ -343,7 +320,6 @@ class TuringGUI:
         except Exception as e: messagebox.showerror("Erro PNG", f"Falha:\n{e}", parent=self.root)
 
     def _generate_svg_text(self):
-        # Gera SVG baseado nas posições atuais (espelha draw_all)
         try:
             self.canvas.update_idletasks()
             self.canvas.update()
@@ -357,7 +333,6 @@ class TuringGUI:
         def esc(t):
             return str(t).replace('&', '&amp;')
 
-        # Agrega transições (src,dst) -> set(label)
         agg = {}
         for (src, read), (dst, write, move) in self.automato.transitions.items():
             label = f"{read}/{write}, {move}"
@@ -412,16 +387,14 @@ class TuringGUI:
         svg.append('</svg>')
         return '\n'.join(svg)
 
-    # --- Comandos Simulação ---
     def cmd_start_simulation(self):
         input_str = self.input_entry.get()
         if not self.automato.start_state: messagebox.showwarning("Simulação", "Defina estado inicial.", parent=self.root); return
         self.history, result = self.automato.simulate_history(input_str)
         self.sim_step = 0; self.sim_playing = False; self.result_indicator = None
-        if not self.history: # Se a simulação falhar em iniciar
+        if not self.history:                                                                                                               
              self.history = [(self.automato.start_state, {i: s for i, s in enumerate(input_str)}, 0)]
         self.draw_all(); self.status.config(f"Simulação iniciada para '{input_str}'.")
-        # Se a simulação for instantânea (ex: trava no início), mostra resultado
         if len(self.history) <= 1 and result != "ACEITO":
              self.result_indicator = result
              self.draw_all()
@@ -433,7 +406,6 @@ class TuringGUI:
             self.sim_step += 1; self.draw_all()
             self.status.config(text=f"Passo {self.sim_step}...")
         else:
-            # Re-simula para obter o resultado final (se não foi loop)
             _, result = self.automato.simulate_history(self.input_entry.get())
             self.result_indicator = result
             self.status.config(text=f"Fim da simulação: {result}")
@@ -451,15 +423,14 @@ class TuringGUI:
     def _playback_step(self):
         if self.sim_playing and self.sim_step < len(self.history) - 1:
             self.cmd_step(); self.root.after(ANIM_MS, self._playback_step)
-        elif self.sim_playing: # Chegou ao fim durante a reprodução
-            self.sim_playing = False; self.cmd_step() # Executa o último passo
+        elif self.sim_playing:
+            self.sim_playing = False; self.cmd_step() 
             self.status.config(text="Reprodução finalizada.")
 
     def cmd_reset_sim(self):
         self.history = []; self.sim_step = 0; self.sim_playing = False; self.result_indicator = None
         self.draw_all(); self.status.config(text="Simulação reiniciada.")
 
-    # --- Handlers Eventos Canvas ---
     def on_canvas_click(self, event):
         cx, cy = self._to_canvas(event.x, event.y)
         clicked_state = self._find_state_at(cx, cy)
@@ -500,47 +471,42 @@ class TuringGUI:
             self.status.config(text=f"Origem {clicked_state}. Clique no destino.")
             return
 
-        # --- INÍCIO DA MODIFICAÇÃO: Substituído simpledialog por Toplevel ---
         if self.mode == "add_transition_dst" and clicked_state:
             src, dst = self.transition_src, clicked_state
             
-            label_result = [None] # Lista mutável para armazenar resultado
+            label_result = [None]
 
             dialog = tk.Toplevel(self.root)
             dialog.title("Adicionar Transição de Turing")
-            dialog.geometry("450x220") # Tamanho maior
-            dialog.transient(self.root) # Mantém no topo
-            dialog.grab_set() # Modal
+            dialog.geometry("450x220") 
+            dialog.transient(self.root) 
+            dialog.grab_set() 
 
-            # Instruções
             instructions = f"Formato: 'Lido / Escrito, Direção'\n(Use {DISPLAY_BLANK} ou deixe em branco para {DISPLAY_BLANK})\nEx: a / b, R"
             tk.Label(dialog, text=f"Transição de '{src}' para '{dst}':\n{instructions}", justify="left").pack(pady=10, padx=12)
 
-            # Campo de entrada
             entry = ttk.Entry(dialog, width=50, font=("Helvetica", 10))
             entry.pack(pady=5, padx=12, fill="x", expand=True)
-            entry.focus_set() # Foca no campo de entrada
+            entry.focus_set()
 
             def on_ok():
                 label_result[0] = entry.get()
                 dialog.destroy()
 
             def on_cancel():
-                dialog.destroy() # label_result[0] permanece None
+                dialog.destroy()
 
-            # Botões OK/Cancelar
             btn_frame = tk.Frame(dialog)
             btn_frame.pack(pady=10)
             ttk.Button(btn_frame, text="OK", command=on_ok, style="Accent.TButton").pack(side=tk.LEFT, padx=5)
             ttk.Button(btn_frame, text="Cancelar", command=on_cancel).pack(side=tk.LEFT, padx=5)
             
-            dialog.bind("<Return>", lambda e: on_ok()) # Enter confirma
-            dialog.bind("<Escape>", lambda e: on_cancel()) # Esc cancela
+            dialog.bind("<Return>", lambda e: on_ok())
+            dialog.bind("<Escape>", lambda e: on_cancel()) 
 
-            dialog.wait_window() # Espera o diálogo fechar
-            label = label_result[0] # Pega o resultado
+            dialog.wait_window()
+            label = label_result[0] 
 
-            # Lógica de parsing (exatamente como antes)
             if label:
                 try:
                     read_part, rest_part = label.split('/', 1)
@@ -564,7 +530,6 @@ class TuringGUI:
             
             self._set_mode("select", pinned=True); self.transition_src = None
             return
-        # --- FIM DA MODIFICAÇÃO ---
 
         if clicked_state: self.dragging = (clicked_state, cx, cy)
         else: self.dragging = None
@@ -591,7 +556,6 @@ class TuringGUI:
         edge = self._find_edge_at(cx, cy)
         if edge: self._edit_edge(*edge)
 
-    # --- Menus Contexto ---
     def _show_state_context_menu(self, event, state):
         menu = tk.Menu(self.root, tearoff=0)
         menu.add_command(label="Definir como inicial", command=lambda s=state: self._set_start_from_menu(s))
@@ -608,7 +572,6 @@ class TuringGUI:
         menu.add_command(label="Excluir todas as transições", command=lambda s=src, d=dst: self._delete_edge(s, d))
         menu.tk_popup(event.x_root, event.y_root)
 
-    # --- Ações Menu Contexto ---
     def _set_start_from_menu(self, state): self._push_undo_snapshot(); self.automato.start_state = state; self.draw_all(); self.status.config(text=f"'{state}' é inicial.")
     def _toggle_final_from_menu(self, state):
         self._push_undo_snapshot()
@@ -660,11 +623,9 @@ class TuringGUI:
                 current_labels.append(f"{read_d} / {write_d}, {move}")
         initial_value = "\n".join(sorted(current_labels))
 
-        # --- MODIFICAÇÃO: Aumentado o tamanho do diálogo de edição ---
-        dialog = tk.Toplevel(self.root); dialog.title(f"Editar {src} -> {dst}"); dialog.transient(self.root); dialog.grab_set(); dialog.geometry("500x400") # <-- Tamanho aumentado
+        dialog = tk.Toplevel(self.root); dialog.title(f"Editar {src} -> {dst}"); dialog.transient(self.root); dialog.grab_set(); dialog.geometry("500x400")
         tk.Label(dialog, text=f"Transições (uma por linha):\nFormato: 'Lido / Escrito, Direção' (use {DISPLAY_BLANK} ou branco)", justify="left").pack(pady=5)
         text_widget = tk.Text(dialog, wrap="word", height=10, width=55, font=("Courier", 10)); text_widget.pack(pady=5, padx=10, expand=True, fill="both"); text_widget.insert("1.0", initial_value)
-        # --- FIM DA MODIFICAÇÃO ---
         
         new_labels_str = None
         def on_ok(): nonlocal new_labels_str; new_labels_str = text_widget.get("1.0", tk.END).strip(); dialog.destroy()
@@ -674,13 +635,11 @@ class TuringGUI:
 
         if new_labels_str is not None:
             self._push_undo_snapshot()
-            # Remove antigas transições src -> dst
             keys_to_del = []
             for key, (d, w, m) in self.automato.transitions.items():
                 if key[0] == src and d == dst: keys_to_del.append(key)
             for k in keys_to_del: del self.automato.transitions[k]
 
-            # Adiciona novas
             errors = []
             for i, line in enumerate([ln.strip() for ln in new_labels_str.split('\n') if ln.strip()]):
                 try:
@@ -698,7 +657,6 @@ class TuringGUI:
             if errors: messagebox.showwarning("Erro Formato", "Ignoradas:\n" + "\n".join(errors), parent=self.root)
             self.draw_all(); self.status.config(text=f"Transições {src}->{dst} atualizadas.")
 
-    # --- Zoom/Pan e Busca ---
     def _to_canvas(self, x, y): return (x - self.offset_x) / self.scale, (y - self.offset_y) / self.scale
     def _from_canvas(self, x, y): return x * self.scale + self.offset_x, y * self.scale + self.offset_y
 
@@ -733,12 +691,11 @@ class TuringGUI:
                 if d_sq < min_dist_sq_logic and d_sq < current_min: found = (src, dst); current_min = d_sq
         return found
 
-    # --- Desenho ---
     def draw_all(self):
         self.canvas.delete("all")
         self.edge_widgets.clear()
-        self._draw_simulation_display() # Desenha a fita primeiro
-        self._draw_edges_and_states()   # Desenha estados e setas por cima
+        self._draw_simulation_display()
+        self._draw_edges_and_states()
 
     def _draw_simulation_display(self):
         """ Desenha a fita da MT no canvas inferior. """
@@ -749,7 +706,7 @@ class TuringGUI:
             canvas_w = canvas.winfo_width()
             canvas_h = canvas.winfo_height()
         except tk.TclError:
-            return # Canvas ainda não está pronto
+            return
 
         if not self.history or canvas_w < 10:
             canvas.create_text(canvas_w/2, canvas_h/2, text="Fita de Simulação", font=("Helvetica", 10, "italic"), fill="#888")
@@ -763,7 +720,6 @@ class TuringGUI:
         y1 = (canvas_h - cell_h) / 2
         y2 = y1 + cell_h
 
-        # Calcula quantas células cabem em cada lado
         num_cells_half = (canvas_w // cell_w) // 2 + 2
         start_idx = head_pos - num_cells_half
         end_idx = head_pos + num_cells_half
@@ -780,7 +736,6 @@ class TuringGUI:
             canvas.create_rectangle(x1, y1, x2, y2, fill=fill, outline="#cbd5e1")
             canvas.create_text(x1 + cell_w/2, y1 + cell_h/2, text=display_symbol, font=("Courier", 12))
 
-        # Desenha a cabeça (triângulo)
         head_x = center_x
         canvas.create_polygon(
             head_x, y1 - 2,
@@ -793,7 +748,6 @@ class TuringGUI:
         """ Desenha estados e transições no canvas principal. """
         active_state = self.history[min(self.sim_step, len(self.history)-1)][0] if self.history else None
 
-        # Agrega transições por (origem, destino)
         agg = defaultdict(list)
         for (src, read), (dst, write, move) in self.automato.transitions.items():
             read_d = read.replace(BLANK_SYMBOL, DISPLAY_BLANK)
@@ -802,7 +756,6 @@ class TuringGUI:
 
         rad_view = STATE_RADIUS * self.scale
 
-        # Desenha Arestas
         for (src, dst), labels in agg.items():
             if src not in self.positions or dst not in self.positions: continue
             x1l, y1l = self.positions[src]; x2l, y2l = self.positions[dst]
@@ -810,13 +763,13 @@ class TuringGUI:
             clr, w = "black", 1.5 * self.scale
             display_labels = sorted(labels)
 
-            if src == dst: # Laço
+            if src == dst: 
                 p1=(x1-rad_view*0.5, y1-rad_view*0.8); c1=(x1-rad_view*1.5, y1-rad_view*2.5); c2=(x1+rad_view*1.5, y1-rad_view*2.5); p2=(x1+rad_view*0.5, y1-rad_view*0.8)
                 self.canvas.create_line(p1, c1, c2, p2, smooth=True, arrow=tk.LAST, width=w, fill=clr)
                 tx, ty = x1, y1 - rad_view * 2.3; tid = self.canvas.create_text(tx, ty, text="\n".join(display_labels), fill=clr, justify=tk.CENTER, font=("Helvetica", 9))
                 txl, tyl = self._to_canvas(tx, ty); self.edge_widgets[(src, dst)] = {"text_pos": (txl, tyl)}
                 self.canvas.tag_bind(tid, "<Double-Button-1>", lambda e, s=src, d=dst: self._edit_edge(s, d))
-            else: # Normal
+            else: 
                 dx, dy = x2 - x1, y2 - y1; dist = math.hypot(dx, dy) or 1; ux, uy = dx/dist, dy/dist
                 bend = 0.25 if (dst, src) in agg else 0
                 sx, sy = x1+ux*rad_view, y1+uy*rad_view; ex, ey = x2-ux*rad_view, y2-uy*rad_view
@@ -827,7 +780,6 @@ class TuringGUI:
                 txl, tyl = self._to_canvas(tx, ty); self.edge_widgets[(src, dst)] = {"text_pos": (txl, tyl)}
                 self.canvas.tag_bind(tid, "<Double-Button-1>", lambda e, s=src, d=dst: self._edit_edge(s, d))
 
-        # Desenha Estados
         for sid in sorted(self.automato.states):
             if sid not in self.positions: continue
             xl, yl = self.positions[sid]; x, y = self._from_canvas(xl, yl)
@@ -838,13 +790,11 @@ class TuringGUI:
             self.canvas.create_text(x, y, text=sid, font=FONT)
             if is_start: self.canvas.create_line(x-rad_view*2, y, x-rad_view, y, arrow=tk.LAST, width=2)
 
-        # Indicador Resultado
         if self.result_indicator:
             color_map = {"ACEITO": "#16a34a", "REJEITADO": "#dc2626", "LOOP": "#f59e0b"}
             clr = color_map.get(self.result_indicator, "#555")
             self.canvas.create_text(self.canvas.winfo_width() - 10, 20, text=self.result_indicator, font=("Helvetica", 16, "bold"), fill=clr, anchor="ne")
 
-    # --- Métodos Undo/Redo ---
     def _push_undo_snapshot(self):
         snap = snapshot_of_turing(self.automato, self.positions)
         if not self.undo_stack or self.undo_stack[-1] != snap:
