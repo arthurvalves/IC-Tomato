@@ -16,3 +16,9 @@ Abra um terminal ou prompt de comando na pasta raiz do projeto (onde o arquivo `
 
 ```bash
 pip install -r requirements.txt
+```
+
+## Autores
+
+* **Pedro Neves ([@PedroN3ves](https://github.com/pedron3ves))**
+* **Arthur Vinicius Alves([@arthurvalves](https://github.com/arthurvalves))**
